@@ -44,8 +44,9 @@ private:
 public:
     mutex_locker()
     {
-        if(pthread_mutex_init(&m_mutex, NULL) != 0)
+        if(pthread_mutex_init(&m_mutex, NULL) != 0) {
             std::cout << "mutex init error!\n";
+        }
     }
     ~mutex_locker()
     {

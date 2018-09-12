@@ -9,6 +9,8 @@
 #include <pthread.h>
 #include <iostream>
 #include <stdlib.h>
+#include <vector>
+
 
 template<class T>
 class threadpool
@@ -16,7 +18,8 @@ class threadpool
 private:
     int thread_number;  //线程池的线程数
     int max_task_number;  //任务队列中的最大任务数
-    pthread_t *all_threads;   //线程数组
+    // pthread_t *all_threads;   //线程数组
+    std::vector<pthread_t> all_threads;
     std::list<T *> task_queue; //任务队列
     mutex_locker queue_mutex_locker;  //互斥锁
     sem_locker queue_sem_locker;   //信号量
@@ -36,22 +39,28 @@ private:
 template <class T>
 threadpool<T>::threadpool(int thread_num, int max_task_num):
     thread_number(thread_num), max_task_number(max_task_num),
-    is_stop(false), all_threads(NULL)
+    is_stop(false)
 {
+    all_threads.clear();
     if((thread_num <= 0) || max_task_num <= 0) {
         std::cout << "threadpool can't init because thread_number = 0 or max_task_number = 0.\n";
         exit(-1);
     }
 
-    all_threads = new pthread_t[thread_number];
-    if(!all_threads)
-        std::cout << "can't init threadpool because thread array can't new.";
+    for(size_t i = 0; i < thread_num; ++i) {
+        pthread_t _thread;
+        all_threads.push_back(_thread);
+    }
+    if(all_threads.empty()) {
+        std::cout << "Can't initial thread pool because thread array can't new.";
+        exit(-1);
+    }
 }
 
 template <class T>
 threadpool<T>::~threadpool()
 {
-    delete []all_threads;
+    all_threads.clear();
     is_stop = true;
 }
 
@@ -65,19 +74,16 @@ void threadpool<T>::stop()
 template <class T>
 void threadpool<T>::start()
 {
-    for(int i = 0; i < thread_number; ++i)
-    {
-    std::cout << "create the " << i << "th thread.\n";
-    if(pthread_create(all_threads + i, NULL, worker, this) != 0)
-    {//创建线程失败，清除成功申请的资源并抛出异常
-        delete []all_threads;
-        throw std::exception();
-    }
-    if(pthread_detach(all_threads[i]))
-    {//将线程设置为脱离线程，失败则清除成功申请的资源并抛出异常
-        delete []all_threads;
-        throw std::exception();
-    }
+    for(int i = 0; i < thread_number; ++i) {
+        std::cout << "create the " << i << "th thread.\n";
+        if(pthread_create(&(all_threads[i]), NULL, worker, this) != 0) {
+            all_threads.clear();
+            throw std::exception();
+        }
+        if(pthread_detach(all_threads[i])) {
+            all_threads.clear();
+            throw std::exception();
+        }
     }
 }
 //添加任务进入任务队列

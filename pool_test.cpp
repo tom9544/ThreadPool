@@ -23,21 +23,16 @@ public:
     }
 };
 
-int main()
-{
+int main() {
     task *ta;
     threadpool<task> pool(10, 15);
-//    pool.start();
-    for(int i = 0; i < 20; ++i)
-    {
-    ta = new task(i);
-//  sleep(2);
-    pool.append_task(ta);
+    for(int i = 0; i < 20; ++i) {
+        ta = new task(i);
+        pool.append_task(ta);
     }
     pool.start();
     sleep(2);
     printf("close the thread pool\n");
     pool.stop();
-    // pause();
     return 0;
 }
