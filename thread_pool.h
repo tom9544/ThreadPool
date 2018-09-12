@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <iostream>
+#include <stdlib.h>
 
 template<class T>
 class threadpool
@@ -37,13 +38,14 @@ threadpool<T>::threadpool(int thread_num, int max_task_num):
     thread_number(thread_num), max_task_number(max_task_num),
     is_stop(false), all_threads(NULL)
 {
-    if((thread_num <= 0) || max_task_num <= 0)
-    printf("threadpool can't init because thread_number = 0"
-        " or max_task_number = 0");
+    if((thread_num <= 0) || max_task_num <= 0) {
+        std::cout << "threadpool can't init because thread_number = 0 or max_task_number = 0.\n";
+        exit(-1);
+    }
 
     all_threads = new pthread_t[thread_number];
     if(!all_threads)
-        printf("can't init threadpool because thread array can't new");
+        std::cout << "can't init threadpool because thread array can't new.";
 }
 
 template <class T>
@@ -65,7 +67,7 @@ void threadpool<T>::start()
 {
     for(int i = 0; i < thread_number; ++i)
     {
-    printf("create the %dth pthread\n", i);
+    std::cout << "create the " << i << "th thread.\n";
     if(pthread_create(all_threads + i, NULL, worker, this) != 0)
     {//创建线程失败，清除成功申请的资源并抛出异常
         delete []all_threads;
@@ -113,7 +115,7 @@ void threadpool<T>::run()
     queue_sem_locker.wait();
     if(errno == EINTR)
     {
-        printf("errno");
+        std::cout << "error.\n";
         continue;
     }
     //获取互斥锁
@@ -128,13 +130,13 @@ void threadpool<T>::run()
     T *task = task_queue.front();
     task_queue.pop_front();
     queue_mutex_locker.mutex_unlock();
-    if(!task)
+    if(!task) {
         continue;
-//  printf("pthreadId = %ld\n", (unsigned long)pthread_self());
+    }
+    std::cout << "pthreadId = " << (unsigned long)pthread_self() << "\n";
     task->doit();  //doit是T对象中的方法
     }
-    //测试用
-    printf("close %ld\n", (unsigned long)pthread_self());
+    std::cout << "close " << (unsigned long)pthread_self() << "\n";
 }
 
 #endif

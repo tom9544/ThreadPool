@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <semaphore.h>
+#include <iostream>
 
 class sem_locker
 {
@@ -14,7 +15,7 @@ public:
     sem_locker()
     {
     if(sem_init(&m_sem, 0, 0) != 0)
-        printf("sem init error\n");
+        std::cout << "sem init error.\n";
     }
     ~sem_locker()
     {
@@ -44,7 +45,7 @@ public:
     mutex_locker()
     {
         if(pthread_mutex_init(&m_mutex, NULL) != 0)
-            printf("mutex init error!");
+            std::cout << "mutex init error!\n";
     }
     ~mutex_locker()
     {
@@ -73,11 +74,11 @@ public:
     cond_locker()
     {
     if(pthread_mutex_init(&m_mutex, NULL) != 0)
-        printf("mutex init error");
+        std::cout << "mutex init error.\n";
     if(pthread_cond_init(&m_cond, NULL) != 0)
     {   //条件变量初始化是被，释放初始化成功的mutex
         pthread_mutex_destroy(&m_mutex);
-        printf("cond init error");
+        std::cout << "cond init error.\n";
     }
     }
     // destroy mutex and cond

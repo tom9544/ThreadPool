@@ -19,7 +19,7 @@ public:
 
     void doit()
     {
-    printf("this is the %dth task\n", number);
+        std::cout << "this is the " << number << "th task.\n";
     }
 };
 
@@ -35,9 +35,9 @@ int main()
     pool.append_task(ta);
     }
     pool.start();
-    sleep(10);
+    sleep(2);
     printf("close the thread pool\n");
     pool.stop();
-    pause();
+    // pause();
     return 0;
 }
