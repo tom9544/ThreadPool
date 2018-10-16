@@ -16,34 +16,35 @@ template<class T>
 class threadpool
 {
 private:
-    int thread_number;  //线程池的线程数
-    int max_task_number;  //任务队列中的最大任务数
-    // pthread_t *all_threads;   //线程数组
-    std::vector<pthread_t> all_threads;
-    std::list<T *> task_queue; //任务队列
-    mutex_locker queue_mutex_locker;  //互斥锁
-    sem_locker queue_sem_locker;   //信号量
-    bool is_stop; //是否结束线程
+    int thread_number;
+    int max_task_number;
+
+    std::list<T *> task_queue;
+    mutex_locker queue_mutex_locker;
+    sem_locker queue_sem_locker;
+    bool is_stop;
 public:
     threadpool(int thread_num = 20, int max_task_num = 30);
     ~threadpool();
     bool append_task(T *task);
     void start();
     void stop();
+
+    std::vector<pthread_t> all_threads;
 private:
-    //线程运行的函数。执行run()函数
     static void *worker(void *arg);
     void run();
 };
 
 template <class T>
 threadpool<T>::threadpool(int thread_num, int max_task_num):
-    thread_number(thread_num), max_task_number(max_task_num),
+    thread_number(thread_num),
+    max_task_number(max_task_num),
     is_stop(false)
 {
     all_threads.clear();
     if((thread_num <= 0) || max_task_num <= 0) {
-        std::cout << "threadpool can't init because thread_number = 0 or max_task_number = 0.\n";
+        std::cout << "thread pool can't init because thread_number = 0 or max_task_number = 0.\n";
         exit(-1);
     }
 
@@ -60,8 +61,9 @@ threadpool<T>::threadpool(int thread_num, int max_task_num):
 template <class T>
 threadpool<T>::~threadpool()
 {
-    all_threads.clear();
-    is_stop = true;
+    std::cout << __FUNCTION__ << " start.\n";
+    // all_threads.clear();
+    // is_stop = true;
 }
 
 template <class T>
@@ -72,77 +74,74 @@ void threadpool<T>::stop()
 }
 
 template <class T>
-void threadpool<T>::start()
-{
+void threadpool<T>::start() {
+    std::cout << __FUNCTION__ << " start.\n";
     for(int i = 0; i < thread_number; ++i) {
         std::cout << "create the " << i << "th thread.\n";
+
         if(pthread_create(&(all_threads[i]), NULL, worker, this) != 0) {
             all_threads.clear();
             throw std::exception();
         }
-        if(pthread_detach(all_threads[i])) {
-            all_threads.clear();
-            throw std::exception();
-        }
+
+        // if(pthread_detach(all_threads[i])) {
+        //     all_threads.clear();
+        //     throw std::exception();
+        // }
     }
 }
-//添加任务进入任务队列
+
 template <class T>
-bool threadpool<T>::append_task(T *task)
-{   //获取互斥锁
+bool threadpool<T>::append_task(T *task) {
+    std::cout << __FUNCTION__ << " start.\n";
     queue_mutex_locker.mutex_lock();
-    //判断队列中任务数是否大于最大任务数
-    if(task_queue.size() > max_task_number)
-    {//是则释放互斥锁
-    queue_mutex_locker.mutex_unlock();
-    return false;
+    if(task_queue.size() > max_task_number) {
+        queue_mutex_locker.mutex_unlock();
+        return false;
     }
-    //添加进入队列
     task_queue.push_back(task);
     queue_mutex_locker.mutex_unlock();
-    //唤醒等待任务的线程
+
     queue_sem_locker.add();
     return true;
 }
 
 template <class T>
-void *threadpool<T>::worker(void *arg)
-{
+void *threadpool<T>::worker(void *arg) {
+    std::cout << __FUNCTION__ << " start, pthreadId: " << (unsigned long)pthread_self() << ".\n";
     threadpool *pool = (threadpool *)arg;
     pool->run();
     return pool;
 }
 
 template <class T>
-void threadpool<T>::run()
-{
-    while(!is_stop)
-    {   //等待任务
-    queue_sem_locker.wait();
-    if(errno == EINTR)
-    {
-        std::cout << "error.\n";
-        continue;
-    }
-    //获取互斥锁
-    queue_mutex_locker.mutex_lock();
-    //判断任务队列是否为空
-    if(task_queue.empty())
-    {
+void threadpool<T>::run() {
+    std::cout << __FUNCTION__ << " start.\n";
+    while(!is_stop) {
+        std::cout << "Waiting 4 semaphore.\n";
+        queue_sem_locker.wait();
+        std::cout << "Got a semaphore.\n";
+        if(errno == EINTR) {
+            std::cout << "error.\n";
+            continue;
+        }
+
+        queue_mutex_locker.mutex_lock();
+        if(task_queue.empty()) {
+            queue_mutex_locker.mutex_unlock();
+            continue;
+        }
+        T *task = task_queue.front();
+        task_queue.pop_front();
         queue_mutex_locker.mutex_unlock();
-        continue;
+        if(!task) {
+            continue;
+        }
+        std::cout << "pthreadId = " << (unsigned long)pthread_self() << "\n";
+        task->doit();
     }
-    //获取队头任务并执行
-    T *task = task_queue.front();
-    task_queue.pop_front();
-    queue_mutex_locker.mutex_unlock();
-    if(!task) {
-        continue;
-    }
-    std::cout << "pthreadId = " << (unsigned long)pthread_self() << "\n";
-    task->doit();  //doit是T对象中的方法
-    }
-    std::cout << "close " << (unsigned long)pthread_self() << "\n";
+
+    std::cout << "Close " << (unsigned long)pthread_self() << "\n";
 }
 
 #endif
