@@ -11,7 +11,6 @@
 #include <stdlib.h>
 #include <vector>
 
-
 template<class T>
 class threadpool
 {
@@ -62,15 +61,15 @@ template <class T>
 threadpool<T>::~threadpool()
 {
     std::cout << __FUNCTION__ << " start.\n";
-    // all_threads.clear();
-    // is_stop = true;
+    all_threads.clear();
+    is_stop = true;
 }
 
 template <class T>
 void threadpool<T>::stop()
 {
     is_stop = true;
-    //queue_sem_locker.add();
+    queue_sem_locker.add();
 }
 
 template <class T>
@@ -95,7 +94,8 @@ template <class T>
 bool threadpool<T>::append_task(T *task) {
     std::cout << __FUNCTION__ << " start.\n";
     queue_mutex_locker.mutex_lock();
-    if(task_queue.size() > max_task_number) {
+    std::cout << "task_queue.size(): " << task_queue.size() << "\n";
+    if(task_queue.size() >= max_task_number) {
         queue_mutex_locker.mutex_unlock();
         return false;
     }
@@ -103,6 +103,8 @@ bool threadpool<T>::append_task(T *task) {
     queue_mutex_locker.mutex_unlock();
 
     queue_sem_locker.add();
+    std::cout << "queue_sem_locker.add()\n";
+
     return true;
 }
 
